@@ -1,4 +1,9 @@
+import os
 
+# Map cog filenames to new content you want to write directly
+# Replace the content strings with the full updated code you want
+updates = {
+    "dynamic_manager.py": """
 import os
 import discord
 from discord.ext import commands, tasks
@@ -80,19 +85,19 @@ class DynamicCogManager(commands.Cog):
         if not channel:
             return
 
-        cog_files = [f[:-3] for f in os.listdir("cogs") if f.endswith(".py") and f[:-3] not in self.exclude and f != "__init__"]
-        cogs = [(cog, f"cogs.{cog}" in self.bot.extensions) for cog in cog_files]
+        cog_files = [f[:-3] for f in os.listdir(\"cogs\") if f.endswith(\".py\") and f[:-3] not in self.exclude and f != \"__init__\"]
+        cogs = [(cog, f\"cogs.{cog}\" in self.bot.extensions) for cog in cog_files]
 
-        embed = discord.Embed(title="🧠 COG STATUS REPORT", description="Live status of all cogs.", color=discord.Color.blurple())
-        embed.set_footer(text="Last updated")
+        embed = discord.Embed(title=\"🧠 COG STATUS REPORT\", description=\"Live status of all cogs.\", color=discord.Color.blurple())
+        embed.set_footer(text=\"Last updated\")
         for cog, is_loaded in sorted(cogs, key=lambda x: (not x[1], x[0])):
-            embed.add_field(name=cog, value="✅ Loaded" if is_loaded else "❌ Not Loaded", inline=False)
+            embed.add_field(name=cog, value=\"✅ Loaded\" if is_loaded else \"❌ Not Loaded\", inline=False)
 
         view = CogDropdownView(self.bot, cogs)
 
         try:
             if self.message:
-                # Delete all non-pinned messages except the current status message and pinned ones
+                # Delete all non-pinned messages except the current status message and the new one being sent
                 async for m in channel.history(limit=50):
                     if m.id != self.message.id and not m.pinned:
                         try:
@@ -100,7 +105,7 @@ class DynamicCogManager(commands.Cog):
                         except:
                             pass
         except Exception as e:
-            print(f"[DynamicCogManager] Purge failed: {e}")
+            print(f\"[DynamicCogManager] Purge failed: {e}\")
 
         if self.message:
             try:
@@ -114,7 +119,24 @@ class DynamicCogManager(commands.Cog):
             if not self.message.pinned:
                 await self.message.pin()
         except discord.Forbidden:
-            print("[DynamicCogManager] Unable to pin the status message.")
+            print(\"[DynamicCogManager] Unable to pin the status message.\")
 
 async def setup(bot):
     await bot.add_cog(DynamicCogManager(bot))
+"""
+}
+
+def update_cogs(cogs_folder="cogs"):
+    for filename, content in updates.items():
+        filepath = os.path.join(cogs_folder, filename)
+        if not os.path.exists(filepath):
+            print(f"File not found: {filepath}")
+            continue
+
+        print(f"Updating {filepath} ...")
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"{filepath} updated.")
+
+if __name__ == "__main__":
+    update_cogs()

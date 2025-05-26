@@ -1,8 +1,8 @@
+
 import discord
 from discord.ext import commands
 import openai
 import os
-import asyncio
 
 AUTHORIZED_ROLES = {1375809453097615470, 1375809454427340840}
 
@@ -34,7 +34,7 @@ class AICog(commands.Cog):
             return await ctx.send("🚫 You don't have permission to edit code.")
 
         file_path = f"cogs/{cog}.py"
-        if not os.path.exists(file_path):
+        if cog == "__init__" or not os.path.exists(file_path):
             return await ctx.send(f"❌ `{cog}.py` not found.")
 
         with open(file_path, "r", encoding="utf-8") as f:
@@ -69,14 +69,33 @@ class AICog(commands.Cog):
         if not preview or preview["file"] != f"cogs/{cog}.py":
             return await ctx.send("⚠️ No matching edit preview found.")
 
-        with open(preview["file"], "w", encoding="utf-8") as f:
-            f.write(preview["code"])
+        try:
+            with open(preview["file"], "w", encoding="utf-8") as f:
+                f.write(preview["code"])
+        except Exception as e:
+            return await ctx.send(f"❌ Failed to write code: {e}")
 
         try:
-            await self.bot.reload_extension(f"cogs.{cog}")
+            if cog != "__init__":
+                await self.bot.reload_extension(f"cogs.{cog}")
             await ctx.send(f"✅ `{cog}.py` updated and reloaded.")
         except Exception as e:
             await ctx.send(f"❌ Reload failed: {e}")
+
+    @commands.command(name="rollback")
+    async def rollback_cog(self, ctx, cog: str):
+        if not self._authorized(ctx):
+            return await ctx.send("🚫 You don't have permission to roll back code.")
+
+        file_path = f"cogs/{cog}.py"
+        try:
+            import subprocess
+            subprocess.run(["git", "checkout", "HEAD~1", "--", file_path], check=True)
+            if cog != "__init__":
+                await self.bot.reload_extension(f"cogs.{cog}")
+            await ctx.send(f"↩️ Rolled back `{cog}.py` to the previous commit.")
+        except Exception as e:
+            await ctx.send(f"❌ Rollback failed: {e}")
 
     def _authorized(self, ctx):
         return any(role.id in AUTHORIZED_ROLES for role in ctx.author.roles)
